@@ -1,0 +1,18 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Output folders
+output/
+downloads/
+*.zip
+
+# OS / Editor artifacts
+.DS_Store
+.idea/
+.vscode/
