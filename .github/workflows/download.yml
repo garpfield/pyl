@@ -1,0 +1,77 @@
+name: Download YouTube Audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      dedup_mode:
+        description: 'Anti-duplicate mode (copy, skip, or hardlink)'
+        required: true
+        default: 'copy'
+        type: choice
+        options:
+          - copy
+          - skip
+          - hardlink
+      audio_quality:
+        description: 'Audio quality (0 = best VBR, 320 = 320k CBR)'
+        required: true
+        default: '0'
+
+jobs:
+  download-audio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies (ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Audio Downloader
+        run: |
+          python downloader.py \
+            --links-file links.txt \
+            --output-dir output \
+            --dedup-mode "${{ github.event.inputs.dedup_mode || 'copy' }}" \
+            --audio-quality "${{ github.event.inputs.audio_quality || '0' }}"
+
+      - name: List generated files
+        run: |
+          echo "Output directory contents:"
+          ls -lh output
+          if [ -d "output/zips" ]; then
+            echo "Playlist zips:"
+            ls -lh output/zips
+          fi
+
+      - name: Upload Master Audio Archive (youtube_audio.zip)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: youtube_audio_all
+          path: output/youtube_audio.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Individual Playlist Zip Archives
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playlist_archives
+          path: output/zips/*.zip
+          if-no-files-found: warn
+          retention-days: 14
